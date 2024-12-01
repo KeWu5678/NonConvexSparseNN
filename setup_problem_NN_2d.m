@@ -34,11 +34,7 @@ x2 = linspace(-p.L,p.L,Nobs1);
 [p.X1, p.X2] = meshgrid(x1, x2);
 p.xhat = [p.X1(:)'; p.X2(:)'];
 
-%theta = linspace(0, 2*pi, 4*20);
-%rho = linspace(0, 1/sqrt(2), 20);
-%[T, R] = meshgrid(theta, rho);
-%[p.X1, p.X2] = pol2cart(T, R);
-%p.xhat = [p.X1(:)'; p.X2(:)'];
+
 
 
 %% kernel
@@ -66,7 +62,6 @@ end
 
 
 function [Ku, dKu] = K(p, xhat, u)
-
 if (nargout > 1)
   [k, dk] = kernel(p, xhat, u.x);
 else
@@ -83,6 +78,8 @@ if (nargout > 1)
 end
 
 end
+
+
 
 function [Ksy, dKsy] = Ks(p, x, xhat, y)
 
@@ -104,6 +101,8 @@ end
 end
 
 function [k, dk] = kernel(p, xhat, x)
+%% Xhat:  2 x Nobs
+%% X:     2 x Nnn        
 
 Nx = size(x, 2);
 Nxh = size(xhat, 2);
@@ -125,9 +124,6 @@ xxhat = sum(X.*Xhat, 3);
 %% y = a*xhat + b
 y = (2*xxhat + 1 - x2) ./ (1 + x2);
 
-%absx = sqrt((.1)^2 + x2);
-%y = (xxhat + 1 - x2) ./ absx;
-
 % smoothing parameter for max
 delta = p.delta;
 
@@ -141,14 +137,13 @@ if ~p.force_upper
     dydx = 2*(Xhat - X - X.*y) ./ (1 + x2);
     dk = (1/2) * (y ./ absy + 1) .* dydx;
   end
+  
 else
   k = (1/2) * absy;
-  
   if (nargout > 1)
     dydx = 2*(Xhat - X - X.*y) ./ (1 + x2);
-    %dydx = (Xhat - 2*X) ./ absx - y.*X ./ absx.^2;
     dk = (1/2) * (y ./ absy) .* dydx;
-  end
+  end 
 end
 
 end
@@ -163,42 +158,23 @@ if gamma == 0
     phi.dphi = @(t) ones(size(t));
     phi.ddphi = @(t) zeros(size(t));
     phi.inv = @(y) y;
-
     phi.prox = @(sigma, g) max(g - sigma, 0);
 else
     th = 1/2;
     gam = gamma/(1-th);
-
     phi.phi = @(t) th * t + (1-th) * log(1 + gam * t) / gam;
     phi.dphi = @(t) th + (1-th) ./ (1 + gam * t);
     phi.ddphi = @(t) - (1-th) * gam ./ (1 + gam * t).^2;
     phi.inv = @(y) y / th; % not the inverse but an upper bound for the inverse
-
     phi.prox = @(sigma, g) (1/2)*max((g - sigma*th - 1/gam) + sqrt( (g - sigma*th - 1/gam)^2 + 4*(g - sigma)/gam), 0);
-
-    %phi.phi = @(t) log(1 + gamma * t) / gamma;
-    %phi.dphi = @(t) 1 ./ (1 + gamma * t);
-    %phi.ddphi = @(t) - gamma ./ (1 + gamma * t).^2;
-    %phi.inv = @(y) (exp(gamma * y) - 1) / gamma;
-
-    %phi.prox = @(sigma, g) max((g - 1/gamma)/2 + sqrt( ((g - 1/gamma)/2)^2 + (g - sigma)/gamma), 0);
 end
-
 end
 
 function obj = Tracking(p)
-
 Nx = numel(p.xhat);
-  
 obj.F = @(y) 1/(2*Nx) * norm(y)^2;
 obj.dF = @(y) 1/Nx * y;
 obj.ddF = @(y) 1/Nx;
-
-%p = 5;
-%obj.F = @(y) 1/(p) * norm(y, p)^p;
-%obj.dF = @(y) 1 * sign(y).*abs(y).^(p-1);
-%obj.ddF = @(y) 1 * spdiags((p-1)*abs(y).^(p-2), 0, Nx, Nx);
-
 end
 
 function u_pp = postprocess(p, u, pp_radius)
