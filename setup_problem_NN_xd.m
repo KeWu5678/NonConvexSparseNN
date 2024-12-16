@@ -117,7 +117,7 @@ y = (2*xxhat + 1 - x2) ./ (1 + x2);
 % smoothing parameter for max
 delta = p.delta;
 
-%% kernel = max_delta(0, y)
+%% kernel = max_delta(0, y) Joe: does this return to 0 when y < 0
 absy = sqrt(delta^2 + y.^2);
 
 if ~p.force_upper
